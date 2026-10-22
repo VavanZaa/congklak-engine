@@ -1,0 +1,67 @@
+{
+  "review_date": "2026-10-14",
+  "timezone": "Asia/Bangkok",
+  "scope": "Corrected planning artifacts only; no engine code or executed acceptance tests",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 1278,
+      "sha256": "3d03f511fc806ac1635f0efce6579f6771cadadbe17b758458b3eaa7e5a6a779"
+    },
+    {
+      "path": "docs/FIRST_IMPLEMENTATION.md",
+      "bytes": 11269,
+      "sha256": "640dfd8b9da40ef8274bd53d4220f08c15284b5c9661caa2f5d3c4d76dc9bd8a"
+    },
+    {
+      "path": "docs/CONGKLAK_ENGINE_PLAN.md",
+      "bytes": 45796,
+      "sha256": "a855b33b5b14515dfc4dd697192f3d07e3d281cc39056f11910e8126bc4dbf8e"
+    },
+    {
+      "path": "docs/DATA_AND_TRAINING_PLAN.md",
+      "bytes": 32339,
+      "sha256": "9efa73418c18b5205dcc1325eb3987201e30a9033d8549b0866c731119d77ce2"
+    },
+    {
+      "path": "docs/UPDATED_PLAN_AUDIT.md",
+      "bytes": 8268,
+      "sha256": "65d12f13d8cd4e10a5560980f42ef2d481303e77241b7f7e1bc4770a8493dae0"
+    },
+    {
+      "path": "docs/PLAN_AUDIT.md",
+      "bytes": 16478,
+      "sha256": "449559ad5113258e856f7f08cd972fb9db485407a2af3249f1ea883498b34b09"
+    },
+    {
+      "path": "docs/research/compute-and-recovery.md",
+      "bytes": 13792,
+      "sha256": "5b5615a2bc38213c58528e5250ea52c3b5cb279116ecfde954557db750c04e21"
+    },
+    {
+      "path": "docs/research/congklak-rules.md",
+      "bytes": 21778,
+      "sha256": "fb1b15ce8413f029446014c97f2d0f8dae622f3dcede51dd1a1f91f5b03d558d"
+    },
+    {
+      "path": "docs/research/engine-comparison.md",
+      "bytes": 35552,
+      "sha256": "36dbfde68f4f07440653462e3a99e0794b878eafbbf0f3c565f622e703ec9d89"
+    },
+    {
+      "path": "docs/audit/ARCHITECTURE_AUDIT_V2.md",
+      "bytes": 13400,
+      "sha256": "a8692c04b7090bede39e0b934dcf1f2fe5f890e07f4adc2d1cdee781b65a52fc"
+    },
+    {
+      "path": "docs/audit/DATA_AUDIT_V2.md",
+      "bytes": 19573,
+      "sha256": "fd58b9c7cfb017ee91cb10b8facb8acb72a39b270f3b53f6fef6c36a08371440"
+    },
+    {
+      "path": "docs/audit/RECOVERY_AUDIT_V2.md",
+      "bytes": 11485,
+      "sha256": "59e441c198f9a956a5fca30d877b029f697c9f276ca55efae2a97c0cfdf91ebd"
+    }
+  ]
+}

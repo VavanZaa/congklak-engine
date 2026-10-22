@@ -1,0 +1,458 @@
+"""Frozen pretraining control and contemporaneous value-only CPU pilot."""
+from __future__ import annotations
+import argparse
+from collections import Counter,defaultdict
+from contextlib import ExitStack,closing
+import ctypes as C
+import importlib.util
+import json
+import math
+import os
+from pathlib import Path
+import sqlite3
+import statistics
+import sys
+import time
+ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT))
+from congklak import config,phase6_common as common,phase6_store
+from congklak import quality_search
+from congklak.native import Native,flatten
+from congklak.neural_relay import NeuralNative,Model,sha
+from congklak.quality_search import search as puct_search
+from congklak.timing_v2 import PerformanceCore
+spec=importlib.util.spec_from_file_location('frozen_phase6_benchmark_value_dependency',ROOT/'tools/benchmark-phase6-v2.py')
+prior=importlib.util.module_from_spec(spec);spec.loader.exec_module(prior)
+require=prior.require;integer=prior.integer;numeric=prior.numeric
+PLAN=ROOT/'build/value-pilot-benchmark-plan.json'
+IMPLEMENTATION=ROOT/'build/value-pilot-benchmark-implementation.json'
+PROJECTION=ROOT/'build/value-pilot-benchmark-projection.json'
+BASELINE=ROOT/'build/value-pilot-baseline.json'
+CONTROL=ROOT/'data/quality-train-v1/model.json'
+PILOT=ROOT/'data/value-pilot-v1/model.json'
+BASELINES=('H_v1','H8_relay_CPU')
+CANDIDATES=('policy_control','value_pilot')
+ENGINES=list(BASELINES+CANDIDATES)
+MODEL_SHA='bc1160e99f419b3c1052ea87b28145b622639e6e76a49127c388ab4926d67558'
+STAGES=('pretraining','posttraining')
+COUNTERS=('positions_submitted','evaluations_requested','terminal_returns','native_actual_evals','predict_successes','cache_hits','cache_misses','cache_evictions','feature_simulations','feature_deposits','native_calls','cache_resets')
+
+
+def counter_snapshot(obj):
+    value=obj.snapshot_counters()
+    if 'cache_current_entries' in value:value={**value,'cache_occupancy':value['cache_current_entries']};del value['cache_current_entries']
+    require(set(value)==set(COUNTERS)|{'cache_capacity','cache_occupancy'},'Evaluator counter fields differ')
+    require(all(integer(x) for x in value.values()),'Invalid evaluator counters')
+    require(value['cache_capacity']==0 and value['cache_occupancy']<=value['cache_capacity'],'Unbounded cache snapshot')
+    return value
+
+def validate_telemetry(value,decision,profile):
+    if profile in ('H_v1','H8_relay_CPU'):
+        require(value is None,'Baseline must not fabricate neural-cache telemetry');return
+    fields={'protocol','profile','counts','cache_capacity','cache_occupancy_before','cache_occupancy_after_reset','cache_occupancy_after','reset_ms','granted_search_ms','requested_ms','deadline_policy','logical_row_evaluations','physical_forward_executions','feature_passes_per_native_eval'}
+    require(isinstance(value,dict) and set(value)==fields,'Unknown evaluator telemetry fields')
+    require(value['protocol']=='value-pilot-puct-counter-delta-v1' and value['profile']==profile and value['requested_ms']==decision['requested_ms'],'Evaluator profile/budget differs')
+    counts=value['counts'];require(isinstance(counts,dict) and set(counts)==set(COUNTERS) and all(integer(x) for x in counts.values()),'Invalid physical counter delta')
+    cap=0
+    require(value['cache_capacity']==cap and all(integer(value[k],0,cap) for k in ('cache_occupancy_before','cache_occupancy_after_reset','cache_occupancy_after')) and value['cache_occupancy_after_reset']==0,'Cache carries prior decision state')
+    require(counts['cache_resets']==1 and counts['evaluations_requested']==counts['cache_hits']+counts['cache_misses'],'Cache request conservation differs')
+    passes=1
+    require(counts['native_actual_evals']<=counts['native_calls']<=passes*counts['cache_misses'] and counts['predict_successes']<=counts['native_actual_evals'],'Actual native-forward accounting differs')
+    require(counts['evaluations_requested']+counts['terminal_returns']<=counts['positions_submitted'],'Admitted counter prefix exceeds submitted rows')
+    require(counts['terminal_returns']==0,'PUCT must not evaluate terminal leaves')
+    if not cap:require(not counts['cache_hits'] and not counts['cache_evictions'] and not value['cache_occupancy_after'],'Disabled cache has hit/eviction')
+    require(counts['cache_evictions']<=counts['native_actual_evals'] and value['cache_occupancy_after']<=counts['predict_successes'],'Cache occupancy/eviction exceeds actual computation')
+    require(value['feature_passes_per_native_eval']==passes and counts['feature_simulations']<=14*passes*counts['native_calls'],'Feature work does not match physical passes')
+    require(counts['feature_simulations']>=counts['native_actual_evals'] and counts['feature_deposits']>=counts['feature_simulations'],'Completed native forwards lack real feature work')
+    require(numeric(value['reset_ms']) and integer(value['granted_search_ms'],0,value['requested_ms']) and value['granted_search_ms']<=max(0,math.floor(value['requested_ms']-value['reset_ms'])),'Cache reset grants extra deadline')
+    require(value['deadline_policy']=='Floor remaining integer milliseconds after reset; no new budget' and value['physical_forward_executions']==counts['native_actual_evals'],'Incorrect deadline/physical label')
+    report=decision['report'];require(value['logical_row_evaluations']==report['work']['neural_evaluations'],'Logical PUCT evaluations relabeled physical')
+    require(report['work']['neural_evaluations']==counts['native_actual_evals'],'Uncached logical rows differ from physical forwards')
+    require(report['work']['feature_simulations']==counts['feature_simulations'] and report['work']['feature_deposits']==counts['feature_deposits'],'PUCT and evaluator physical feature work disagree')
+
+def empty_report(p,plan,name):
+    legal=[a for a,c in enumerate(p['pits'][p['controller']]) if c];d=p['stores'][0]-p['stores'][1]
+    return dict(schema=quality_search.SCHEMA,position=p,chosen=legal[0],visits=[0]*7,policy=[1/len(legal) if a in legal else 0 for a in range(7)],root_priors=[0.]*7,estimated_value_player0=d,action_mean_value_player0=[None]*7,root_expanded=False,
+                completed_simulations=0,requested_simulations=plan['puct']['simulations'],nodes=1,max_nodes=plan['puct']['max_nodes'],stop_reason='time_budget',proof_status='monte_carlo_estimate',usable_decision=False,
+                protocol=quality_search.PROTOCOL,rules_digest=config.RULES_DIGEST,value_perspective='fixed_player0_seeds',first_play_urgency='parent_neural_bootstrap',unvisited_root_q_player0=d,c_puct=plan['profiles'][name]['c_puct'],memory_mb=8192,
+                work=dict(transitions=0,deposits=0,feature_simulations=0,feature_deposits=0,neural_evaluations=0,neural_calls=0,inference_ms=0.,root_expansions=0,total_deposits=0),
+                timing=dict(elapsed_ms=0.,requested_time_ms=0,overshoot_ms=0.,whole_decision_includes_inference=True),forest_batch_calls=0,forest_size=1)
+
+
+def legacy_view(decision):
+    """Copied compatibility view only; original protocol/coefficient stay saved."""
+    if decision['kind']!='puct':return decision
+    report=prior.compact_puct(decision['report'])
+    return {**decision,'report':{**report,'protocol':prior.PUCT_PROTOCOL,'c_puct':1.5}}
+
+def decide(name,engine,p,ms,plan):
+    started=time.perf_counter();kind,obj=engine
+    if kind!='puct':return dict(decision=prior.decide(engine,p,ms,plan),evaluator=None)
+    before=counter_snapshot(obj);tick=time.perf_counter();obj.reset_cache();reset_ms=(time.perf_counter()-tick)*1000;reset=counter_snapshot(obj)
+    grant=max(0,math.floor(ms-(time.perf_counter()-started)*1000))
+    if grant:
+        raw=puct_search(p,obj,simulations=plan['puct']['simulations'],time_ms=grant,max_nodes=plan['puct']['max_nodes'],c_puct=plan['profiles'][name]['c_puct'],root_noise=None,memory_mb=8192)
+        report=raw;elapsed=raw['timing']['elapsed_ms']
+    else:
+        remaining=ms/1000-(time.perf_counter()-started)
+        if remaining>0:time.sleep(remaining)
+        report=empty_report(p,plan,name);elapsed=0.
+    after=counter_snapshot(obj);wall=(time.perf_counter()-started)*1000
+    # A native search can correctly stop at the floored sub-budget before the
+    # original fractional deadline. Retain that time, label budget rounding.
+    if report['stop_reason']=='time_budget' and wall<ms:time.sleep((ms-wall)/1000)
+    wall=(time.perf_counter()-started)*1000
+    answer=dict(kind='puct',report=report,stop_reason=report['stop_reason'],engine_elapsed_ms=elapsed,nodes=report['nodes'],usable_decision=report['usable_decision'],chosen=report['chosen'] if report['usable_decision'] else None,
+                completed_depth=None,completed_simulations=report['completed_simulations'],wall_ms=wall,requested_ms=ms,overshoot_ms=max(0.,wall-ms))
+    telemetry=dict(protocol='value-pilot-puct-counter-delta-v1',profile=name,counts={k:after[k]-before[k] for k in COUNTERS},cache_capacity=after['cache_capacity'],cache_occupancy_before=before['cache_occupancy'],cache_occupancy_after_reset=reset['cache_occupancy'],cache_occupancy_after=after['cache_occupancy'],reset_ms=reset_ms,granted_search_ms=grant,requested_ms=ms,
+                   deadline_policy='Floor remaining integer milliseconds after reset; no new budget',logical_row_evaluations=report['work']['neural_evaluations'],physical_forward_executions=after['native_actual_evals']-before['native_actual_evals'],feature_passes_per_native_eval=1)
+    result=dict(decision=answer,evaluator=telemetry);validate_envelope(result,p,ms,plan,name)
+    wall=(time.perf_counter()-started)*1000;answer.update(wall_ms=wall,overshoot_ms=max(0.,wall-ms));return result
+
+def validate_envelope(value,p,ms,plan,name):
+    require(isinstance(value,dict) and set(value)=={'decision','evaluator'},'Unknown decision envelope')
+    require(name in ENGINES,'Unknown value engine')
+    decision=value['decision']
+    if name in CANDIDATES:
+        require(isinstance(decision,dict) and decision.get('kind')=='puct','Candidate search kind differs')
+        quality_search.validate_report(decision['report'],p,plan['puct']['simulations'],plan['puct']['max_nodes'],c_puct=plan['profiles'][name]['c_puct'])
+        require(decision['engine_elapsed_ms']==decision['report']['timing']['elapsed_ms'],'Value inner clock differs')
+        require(decision['report']['timing']['requested_time_ms']==value['evaluator']['granted_search_ms'],'Value granted clock differs')
+    prior.validate_decision(legacy_view(decision),p,ms,plan)
+    require(value['decision']['kind']==('h' if name=='H_v1' else 'relay' if name=='H8_relay_CPU' else 'puct'),'Evaluator/search engine family differs')
+    validate_telemetry(value['evaluator'],value['decision'],name)
+
+def validate_case(body,index,plan):
+    for ms,engines in body['measurements'].items():
+        for name,value in engines.items():
+            require(set(value)=={'decision','reference_optimal','reference_regret'},'Unknown measurement envelope');validate_envelope(value['decision'],plan['cases'][index]['state'],int(ms),plan,name)
+    stripped={**body,'measurements':{ms:{name:{'decision':legacy_view(value['decision']['decision']),'reference_optimal':value['reference_optimal'],'reference_regret':value['reference_regret']} for name,value in engines.items()} for ms,engines in body['measurements'].items()}}
+    prior.validate_case(stripped,index,plan)
+
+def replay_game(body,comparison,pair,seat,plan,native):
+    p=body['start']
+    for action,row in zip(body['moves'],body['decisions']):
+        p=native.normalize(flatten(p),actor=p['controller'],total=98)['position'];validate_envelope(row['decision'],p,plan['arena_ms'],plan,row['engine'])
+        p=native.apply(flatten(p),actor=p['controller'],action=action,total=98,trace=False)['position']
+    stripped={**body,'decisions':[{**row,'decision':legacy_view(row['decision']['decision'])} for row in body['decisions']]}
+    prior.replay_game(stripped,comparison,pair,seat,plan,native)
+
+
+def load(path):
+    return json.loads(Path(path).read_text(encoding='utf-8'),parse_constant=lambda x:(_ for _ in ()).throw(ValueError(x)))
+
+
+def pins_current(mapping):
+    require(isinstance(mapping,dict) and mapping,'Missing input pins')
+    for name,digest in mapping.items():
+        require((ROOT/name).is_file() and sha(ROOT/name)==digest,'Changed value pilot input: '+name)
+
+
+def baseline():
+    value=load(BASELINE)
+    require(value['passed'] is True and len(value['inputs'])==2426,'Wrong value pilot prior coverage')
+    pins_current(value['inputs']);require(sha(CONTROL)==MODEL_SHA,'Fixed control model changed')
+    return value
+
+
+def arena_order(plan):
+    names=[row['id'] for row in plan['arena_comparisons']];order=[]
+    for pair in range(len(plan['arena_starts'])):
+        shift=pair%len(names)
+        for name in names[shift:]+names[:shift]:
+            for seat in ((0,1) if pair%2==0 else (1,0)):
+                order.append(dict(comparison=name,pair=pair,seat=seat))
+    return order
+
+
+def expected_plan():
+    old=load(ROOT/'build/value-plan.json');projection=load(PROJECTION)
+    require(projection['prior_value_plan_sha256']==sha(ROOT/'build/value-plan.json') and len(projection['cases'])==44 and len(projection['arena_starts'])==12,'Invalid frozen development projection')
+    # Independently reconstruct selection; no arena outcomes enter selection.
+    import hashlib
+    def choose(rows,tag):
+        selected=[]
+        for kind in ('ordinary','capture','bonus'):
+            group=[row for row in rows if row['stratum'].endswith('/'+kind)]
+            selected+=sorted(group,key=lambda row:hashlib.sha256((tag+'|'+row['family']+'|'+row['state_key']).encode()).hexdigest())[:4]
+        return selected
+    require(projection['cases']==choose(old['cases'][:48],'value-pilot-diagnostics-v1')+old['cases'][48:] and projection['arena_starts']==choose(old['arena_starts'],'value-pilot-arena-v1'),'Changed deterministic development selection')
+    return dict(schema='value-pilot-benchmark-plan-v1',rules_digest=config.RULES_DIGEST,baseline_sha256=sha(BASELINE),prior_inputs=2426,
+        projection_sha256=sha(PROJECTION),cases=projection['cases'],arena_starts=projection['arena_starts'],
+        models=dict(control='data/quality-train-v1/model.json',pilot='data/value-pilot-v1/model.json'),control_model_sha256=MODEL_SHA,
+        source_model=old['source_model'],source_model_sha256=old['source_model_sha256'],
+        profiles={name:dict(model='control' if name=='policy_control' else 'pilot',c_puct=.25,cache_capacity=0) for name in CANDIDATES},
+        engines=ENGINES,budgets_ms=[25,100],arena_ms=25,arena_max_choices=512,max_depth=16,tt_mb=16,use_pvs=True,memory_mb=8192,cpu_declared=old['cpu_declared'],
+        puct=dict(simulations=100000,max_nodes=2048,root_noise=None,first_play_urgency='parent_neural_bootstrap'),bootstrap_samples=4096,bootstrap_seed=20261025,
+        stages=dict(pretraining=dict(profiles=['policy_control'],cases=44,scalar_measurements=264,games=48),posttraining=dict(profiles=list(CANDIDATES),cases=44,scalar_measurements=352,games=96)),
+        attribution='Matched posttraining value_pilot minus contemporaneous policy_control paired-family mean margins; descriptive, no promotion gate',
+        control_drift='Pretraining versus posttraining unchanged control is descriptive timing variation; no causal attribution to training from between-invocation differences',
+        selection='Fixed final value-head checkpoint only; no checkpoint, family, search, budget or hyperparameter selection from benchmark outcomes',
+        novelty='All12 arena families and44 diagnostics reuse consumed development; ancestral exposure and deliberate H14 study selection remain; no fresh or sealed final claim',
+        clock='Whole decision including reset, features, inference and validation; floor positive remaining milliseconds; no time_ms zero; retain overshoot',
+        release='Exploratory12-family both-baseline intervals, no automatic promotion; finite pilot cannot establish general strength or energy benefit',
+        default_promotion=False,sealed_final_test_consumed=False,energy_measured=False)
+
+
+def make_plan():
+    baseline();value=expected_plan();common.publish(PLAN,value);return value
+
+
+def read_plan(stage='posttraining',fixture=False):
+    require(stage in STAGES,'Unknown benchmark stage')
+    full=load(PLAN);require(full==expected_plan(),'Frozen value pilot schedule changed')
+    names=full['stages'][stage]['profiles'];p={**full,'stage':stage,'full_plan_sha256':config.digest(full),'fixture':bool(fixture),
+        'profiles':{name:full['profiles'][name] for name in names},'engines':list(BASELINES)+names}
+    if fixture:p.update(cases=full['cases'][:1],arena_starts=full['arena_starts'][:1])
+    p['arena_comparisons']=[dict(id=name+'_vs_'+base,candidate=name,opponent=base,pairs=len(p['arena_starts'])) for name in names for base in BASELINES]
+    p['arena_work_order']=arena_order(p)
+    return p
+
+
+def freeze():
+    baseline();require(load(PLAN)==expected_plan(),'Cannot freeze changed schedule')
+    sources=('congklak/value_pilot_benchmark.py','tools/benchmark-value-pilot.py','congklak/value_pilot_progress.py','tools/value-pilot-dashboard.html')
+    science=('build/value-pilot-baseline.json','build/value-pilot-benchmark-projection.json','build/value-pilot-benchmark-plan.json')
+    body=dict(schema='value-pilot-benchmark-implementation-v1',sources={name:sha(ROOT/name) for name in sources},science_inputs={name:sha(ROOT/name) for name in science},rules_digest=config.RULES_DIGEST)
+    body={**body,'sha256':config.digest(body)};common.publish(IMPLEMENTATION,body);return body
+
+
+def verify_frozen_policy(control,candidate):
+    frozen=('layers.0.weight','layers.0.bias','layers.2.weight','layers.2.bias','policy.weight','policy.bias');head=('layers.4.weight','layers.4.bias')
+    require(set(control.weights)==set(candidate.weights)==set(frozen+head),'Value pilot parameter names differ')
+    require(all(config.canonical(control.weights[name])==config.canonical(candidate.weights[name]) for name in frozen),'Frozen trunk or policy changed')
+    require(any(config.canonical(control.weights[name])!=config.canonical(candidate.weights[name]) for name in head),'Pilot value head did not change')
+    return dict(frozen_tensor_names=list(frozen),frozen_tensors_sha256=config.digest({name:control.weights[name] for name in frozen}),trainable_tensor_names=list(head),trainable_parameters=65,global_policy_unchanged_by_identical_subgraph=True)
+
+
+def admit(plan):
+    baseline();implementation=load(IMPLEMENTATION)
+    require(set(implementation)=={'schema','sources','science_inputs','rules_digest','sha256'} and implementation['schema']=='value-pilot-benchmark-implementation-v1' and implementation['rules_digest']==config.RULES_DIGEST and implementation['sha256']==config.digest({k:v for k,v in implementation.items() if k!='sha256'}),'Bad benchmark implementation')
+    require(set(implementation['sources'])=={'congklak/value_pilot_benchmark.py','tools/benchmark-value-pilot.py','congklak/value_pilot_progress.py','tools/value-pilot-dashboard.html'} and
+            set(implementation['science_inputs'])=={'build/value-pilot-baseline.json','build/value-pilot-benchmark-projection.json','build/value-pilot-benchmark-plan.json'},'Missing frozen benchmark source/science role')
+    pins_current(implementation['sources']);pins_current(implementation['science_inputs'])
+    require(plan==read_plan(plan['stage'],plan['fixture']),'Unregistered stage configuration')
+    control=Model(CONTROL);require(control.file_sha256==MODEL_SHA,'Control model changed')
+    witness=dict(schema='value-pilot-benchmark-admission-v1',stage=plan['stage'],fixture=plan['fixture'],prior_accepted_inputs=2426,control_model_sha256=control.file_sha256,control_weights_sha256=control.id)
+    if plan['stage']=='posttraining':
+        from .value_pilot_learning import witness as model_witness
+        proof=model_witness(PILOT.parent);candidate=Model(PILOT)
+        witness.update(model_witness=proof,frozen_policy_witness=verify_frozen_policy(control,candidate),pretraining=pretraining_witness())
+    return implementation,witness
+
+
+def summarize(db,identity,plan):
+    buckets=defaultdict(list)
+    for text, in db.execute('SELECT body FROM cases ORDER BY idx'):
+        body=json.loads(text)
+        for ms,engines in body['measurements'].items():
+            for name,value in engines.items():buckets[(body['cohort'],ms,name)].append(value)
+    cases={}
+    for key,rows in buckets.items():
+        decisions=[row['decision']['decision'] for row in rows];usable=[row for row in rows if row['decision']['decision']['usable_decision']]
+        counts={name:sum((row['decision']['evaluator'] or {}).get('counts',{}).get(name,0) for row in rows) for name in COUNTERS} if key[2] in CANDIDATES else None
+        cases['/'.join(key)]=dict(positions=len(rows),no_completed_recommendation=len(rows)-len(usable),reference_optimal_accuracy=statistics.mean(row['reference_optimal'] for row in usable) if usable else None,
+            mean_reference_regret_seeds=statistics.mean(row['reference_regret'] for row in usable) if usable else None,median_wall_ms=statistics.median(row['wall_ms'] for row in decisions),max_wall_ms=max(row['wall_ms'] for row in decisions),max_overshoot_ms=max(row['overshoot_ms'] for row in decisions),
+            mean_completed_simulations=statistics.mean(row['completed_simulations'] for row in decisions) if decisions[0]['kind']=='puct' else None,evaluator_counts=counts)
+    arenas={};paired={}
+    for comp in plan['arena_comparisons']:
+        games=[json.loads(text) for text, in db.execute('SELECT body FROM games WHERE comparison=? ORDER BY pair,seat',(comp['id'],))];values=[];scores=[];paired[comp['id']]={}
+        for pair in range(comp['pairs']):
+            group=[game for game in games if game['pair']==pair]
+            if len(group)==2 and all(game['status']=='terminal' for game in group):
+                mean=statistics.mean(game['candidate_final_margin'] for game in group);values.append(mean);paired[comp['id']][pair]=mean;scores.append(statistics.mean(game['candidate_match_score'] for game in group))
+        ci=prior.interval(values,plan);fallbacks={name:sum(game['fallbacks'].get(name,0) for game in games) for name in (comp['candidate'],comp['opponent'])}
+        arenas[comp['id']]=dict(pairs=comp['pairs'],complete_pairs=len(values),incomplete_pairs=comp['pairs']-len(values),terminal_games=sum(game['status']=='terminal' for game in games),unfinished_games=sum(game['status']!='terminal' for game in games),
+            candidate_wins=sum(game['candidate_match_score']==1 for game in games),candidate_draws=sum(game['candidate_match_score']==.5 for game in games),candidate_losses=sum(game['candidate_match_score']==0 for game in games),paired_mean_score=statistics.mean(scores) if scores else None,
+            primary_paired_mean_final_margin_seeds=statistics.mean(values) if values else None,primary_margin_bootstrap_95_interval=ci,primary_strength_gate_passed=bool(len(values)==comp['pairs'] and not sum(fallbacks.values()) and ci and ci[0]>0),fallback_counts=fallbacks)
+    gates={name:all(arenas[name+'_vs_'+base]['primary_strength_gate_passed'] for base in BASELINES) for name in plan['profiles']};contrasts={}
+    if plan['stage']=='posttraining':
+        for base in BASELINES:
+            treatment=paired['value_pilot_vs_'+base];control=paired['policy_control_vs_'+base];matched=sorted(set(treatment)&set(control));expected=len(plan['arena_starts'])
+            contrasts[base]=dict(treatment='value_pilot',control='policy_control',expected_families=expected,complete_matched_families=len(matched),paired_mean_seed_margin_difference=statistics.mean(treatment[pair]-control[pair] for pair in matched) if len(matched)==expected else None,confidence_interval=None,primary_gate=False)
+    return dict(schema='value-pilot-benchmark-results-v1',identity=identity,stage=plan['stage'],fixture=plan['fixture'],cases=db.execute('SELECT COUNT(*) FROM cases').fetchone()[0],games=db.execute('SELECT COUNT(*) FROM games').fetchone()[0],scalar_measurements=sum(len(rows) for rows in buckets.values()),case_results=cases,arenas=arenas,both_baseline_primary_gates=gates,secondary_factor_contrasts=contrasts,default_promotion=False,sealed_final_test_consumed=False,energy_measured=False,development_reuse=True,scope=plan['release'])
+
+
+def emit(body):
+    print(config.canonical(body),flush=True)
+    event=os.environ.get('VALUE_PILOT_BLOCK_EVENT');step=os.environ.get('VALUE_PILOT_BLOCK_STEP');marker=os.environ.get('VALUE_PILOT_BLOCK_MARKER')
+    if event and body.get('event')==event and (step is None or int(step)==body.get('completed')):
+        if marker:
+            path=Path(marker);path.parent.mkdir(parents=True,exist_ok=True);path.write_text(config.canonical(body)+'\n',encoding='utf-8')
+        while True:time.sleep(.05)
+
+
+def validate_saved_units(db,plan,native):
+    comparisons={row['id']:row for row in plan['arena_comparisons']};order=plan['arena_work_order']
+    for expected,(index,text,digest) in enumerate(db.execute('SELECT idx,body,hash FROM cases ORDER BY idx')):
+        require(index==expected and config.digest(json.loads(text))==digest,'Corrupt/noncontiguous pilot case prefix');validate_case(json.loads(text),index,plan)
+    for expected,(index,name,pair,seat,text,digest) in enumerate(db.execute('SELECT idx,comparison,pair,seat,body,hash FROM games ORDER BY idx')):
+        require(index==expected and expected<len(order) and order[expected]==dict(comparison=name,pair=pair,seat=seat) and config.digest(json.loads(text))==digest,'Corrupt/orphan pilot game prefix')
+        replay_game(json.loads(text),comparisons[name],pair,seat,plan,native)
+    return db.execute('SELECT COUNT(*) FROM cases').fetchone()[0],db.execute('SELECT COUNT(*) FROM games').fetchone()[0]
+
+
+def paths(stage):
+    require(stage in STAGES,'Unknown stage path');return ROOT/('data/value-pilot-benchmark-'+stage+'-v1'),ROOT/('build/value-pilot-benchmark-'+stage+'.json')
+
+
+def validate_resources(body,report_path,implementation,plan,expected_report_sha256=None):
+    fields={'schema','implementation_sha256','report_file_sha256','stage','fixture','elapsed_seconds_this_invocation','prior_committed_cases','prior_committed_games','host','torch_imported','energy_measured','scope'}
+    require(isinstance(body,dict) and set(body)==fields and body['schema']=='value-pilot-benchmark-resources-v1','Unknown resource observation')
+    require(body['implementation_sha256']==implementation['sha256'] and body['report_file_sha256']==(expected_report_sha256 or sha(report_path)) and body['stage']==plan['stage'] and body['fixture']==plan['fixture'],'Resource identity differs')
+    require(numeric(body['elapsed_seconds_this_invocation']) and integer(body['prior_committed_cases'],0,len(plan['cases'])) and integer(body['prior_committed_games'],0,len(plan['arena_work_order'])),'Invalid resource clock/prefix')
+    require(body['torch_imported'] is False and body['energy_measured'] is False and body['scope']=='This CPU-only invocation including admission/startup/remaining units/publication; earlier invocations excluded; no energy claim','Invalid resource claim')
+    host=body['host'];require((host is None and os.name!='nt') or (isinstance(host,dict) and set(host)=={'peak_working_set_bytes','peak_private_commit_bytes'} and all(integer(value,1) for value in host.values())),'Invalid process memory observation')
+    return body
+
+
+def host_peak():
+    if os.name!='nt':return None
+    class Counters(C.Structure):
+        _fields_=[('cb',C.c_ulong),('faults',C.c_ulong)]+[(key,C.c_size_t) for key in ('peak','working','peak_paged','paged','peak_nonpaged','nonpaged','pagefile','peak_pagefile')]
+    kernel=C.WinDLL('kernel32',use_last_error=True);kernel.GetCurrentProcess.restype=C.c_void_p;psapi=C.WinDLL('psapi',use_last_error=True);psapi.GetProcessMemoryInfo.argtypes=[C.c_void_p,C.POINTER(Counters),C.c_ulong]
+    value=Counters();value.cb=C.sizeof(value)
+    if not psapi.GetProcessMemoryInfo(kernel.GetCurrentProcess(),C.byref(value),value.cb):raise C.WinError(C.get_last_error())
+    return dict(peak_working_set_bytes=value.peak,peak_private_commit_bytes=value.peak_pagefile)
+
+
+def validate_complete(db,identity,plan,implementation,output,marker):
+    cases,games=validate_saved_units(db,plan,Native());expected_cases=len(plan['cases']);expected_games=len(plan['arena_work_order'])
+    require(isinstance(marker,dict) and set(marker)=={'cases','games','report_sha256','resource_file_sha256'} and marker['cases']==cases==expected_cases and marker['games']==games==expected_games,'Incomplete or altered stage completion marker')
+    result=summarize(db,identity,plan);resource_path=Path(output).with_name(Path(output).stem+'-resources.json')
+    require(config.digest(result)==marker['report_sha256'] and resource_path.is_file() and sha(resource_path)==marker['resource_file_sha256'],'Closed results/resource checksum differs')
+    if Path(output).exists():require(load(output)==result,'Closed publication differs')
+    import hashlib
+    # Frozen common.publish uses native text newlines (CRLF on this Windows
+    # timing host). Missing-export validation must match those exact bytes.
+    expected_file_sha=hashlib.sha256((config.canonical(result)+os.linesep).encode('utf-8')).hexdigest()
+    validate_resources(load(resource_path),output,implementation,plan,expected_file_sha)
+    return result
+
+
+def _metadata(db,key):
+    row=db.execute('SELECT body,hash FROM meta WHERE key=?',(key,)).fetchone()
+    require(row is not None,'Missing committed metadata: '+key);body=json.loads(row[0]);require(config.digest(body)==row[1],'Corrupt metadata: '+key);return body
+
+
+def pretraining_witness():
+    """Read-only completed control proof; safe before importing Torch."""
+    plan=read_plan('pretraining');implementation,admission=admit(plan);path,output=paths('pretraining')
+    require((path/'work.sqlite3').is_file() and output.is_file(),'Pretraining control must complete before training')
+    with closing(sqlite3.connect((path/'work.sqlite3').as_uri()+'?mode=ro',uri=True)) as db:
+        identity=_metadata(db,'identity');marker=_metadata(db,'value_pilot_benchmark_complete')
+        require(identity['schema']=='value-pilot-benchmark-v1' and identity['stage']=='pretraining' and identity['fixture'] is False and identity['plan_sha256']==config.digest(plan) and
+                identity['implementation']==implementation and identity['implementation_file_sha256']==sha(IMPLEMENTATION) and identity['admission']==admission,'Pretraining control identity changed')
+        result=validate_complete(db,identity,plan,implementation,output,marker)
+    require(result['cases']==44 and result['games']==48 and result['scalar_measurements']==264,'Wrong pretraining coverage')
+    resource=output.with_name(output.stem+'-resources.json')
+    # This describes the validated completed control invocation, not the caller.
+    # A later Torch verifier must obtain the same identity-bound witness.
+    return dict(schema='value-pilot-pretraining-witness-v1',passed=True,plan_sha256=config.digest(plan),implementation_sha256=implementation['sha256'],journal_sha256=sha(path/'work.sqlite3'),report_file_sha256=sha(output),resource_file_sha256=sha(resource),control_model_sha256=MODEL_SHA,cases=44,scalar_measurements=264,games=48,torch_imported=False,teacher_search_performed=False)
+
+
+def closed_witness(stage):
+    plan=read_plan(stage);implementation,admission=admit(plan);path,output=paths(stage)
+    require((path/'work.sqlite3').is_file() and output.is_file(),'Benchmark stage is not published complete')
+    with closing(sqlite3.connect((path/'work.sqlite3').as_uri()+'?mode=ro',uri=True)) as db:
+        identity=_metadata(db,'identity');marker=_metadata(db,'value_pilot_benchmark_complete')
+        require(identity['stage']==stage and identity['fixture'] is False and identity['plan_sha256']==config.digest(plan) and identity['admission']==admission and identity['implementation']==implementation,'Closed benchmark identity differs')
+        result=validate_complete(db,identity,plan,implementation,output,marker)
+    return dict(schema='value-pilot-benchmark-closed-witness-v1',passed=True,stage=stage,journal_sha256=sha(path/'work.sqlite3'),report_file_sha256=sha(output),cases=result['cases'],games=result['games'],scalar_measurements=result['scalar_measurements'])
+
+
+def run(stage='pretraining',path=None,output=None,case_limit=None,no_arena=False,arena_limit=None,on_event=emit,fixture=False):
+    invocation_started=time.perf_counter();require('torch' not in sys.modules,'CPU benchmark invocation has Torch loaded');plan=read_plan(stage,fixture);implementation,witness=admit(plan);default_path,default_output=paths(stage)
+    path=Path(path) if path is not None else default_path;output=Path(output) if output is not None else default_output
+    if fixture:require(path.resolve().is_relative_to((ROOT/'build').resolve()) and output.resolve().is_relative_to((ROOT/'build').resolve()),'Fixture paths must stay under build')
+    else:require(path.resolve()==default_path.resolve() and output.resolve()==default_output.resolve(),'Unregistered production paths')
+    cases_total=len(plan['cases']);games_total=len(plan['arena_work_order'])
+    if case_limit is not None:require(integer(case_limit,0,cases_total),'Invalid case limit')
+    if arena_limit is not None:require(integer(arena_limit,0,games_total),'Invalid arena limit')
+    if stage=='pretraining' and not fixture and not (path/'work.sqlite3').exists():
+        require(not (PILOT.parent/'catalog.sqlite3').exists() and not PILOT.exists(),'Training started before the pretraining control')
+    from congklak.puct_cpu_inference import CpuBatchEvaluator
+    with ExitStack() as stack:
+        cpu=stack.enter_context(PerformanceCore(plan['cpu_declared']));baseline_engine=Native()
+        identity=dict(schema='value-pilot-benchmark-v1',stage=stage,fixture=fixture,plan_sha256=config.digest(plan),implementation=implementation,implementation_file_sha256=sha(IMPLEMENTATION),admission=witness,cpu=cpu.metadata,
+            baseline_dll_sha256=baseline_engine.build_id,source_model_sha256=plan['source_model_sha256'],model_files={name:sha(ROOT/plan['models'][profile['model']]) for name,profile in plan['profiles'].items()},memory_mb_all_engines=8192)
+        work=stack.enter_context(closing(phase6_store.Work(path,identity)));db=work.db
+        db.executescript('CREATE TABLE IF NOT EXISTS cases(idx INTEGER PRIMARY KEY,body TEXT,hash TEXT); CREATE TABLE IF NOT EXISTS games(idx INTEGER PRIMARY KEY,comparison TEXT,pair INTEGER,seat INTEGER,body TEXT,hash TEXT,UNIQUE(comparison,pair,seat)); CREATE TABLE IF NOT EXISTS setup(id INTEGER PRIMARY KEY,body TEXT,hash TEXT);')
+        count,game_count=validate_saved_units(db,plan,baseline_engine);initial_cases=count;initial_games=game_count
+        marker=work.get('value_pilot_benchmark_complete')
+        if marker:
+            result=validate_complete(db,identity,plan,implementation,output,marker)
+            common.publish(output,result);on_event(dict(event='value_pilot_benchmark_already_complete',stage=stage,cases=count,games=game_count));return result
+        source=stack.enter_context(NeuralNative(ROOT/plan['source_model'],mode='value-none'));engines={'H_v1':('h',baseline_engine),'H8_relay_CPU':('relay',source)}
+        require(source.model.file_sha256==plan['source_model_sha256'],'H8 relay baseline changed')
+        setup_row=db.execute('SELECT body,hash FROM setup WHERE id=0').fetchone();warmup={}
+        require(db.execute('SELECT COUNT(*) FROM setup').fetchone()[0] in ((1,) if setup_row else (0,)) and (setup_row is not None or not (count or game_count)),'Invalid startup witness')
+        for name,profile in plan['profiles'].items():
+            obj=stack.enter_context(CpuBatchEvaluator(ROOT/plan['models'][profile['model']],cache_capacity=0,max_batch=32,backend='auto'));engines[name]=('puct',obj)
+            cpu.verify();obj.reset_cache();tick=time.perf_counter();obj.evaluate_many([row['state'] for row in plan['cases'][:8]]);obj.reset_cache();warmup[name]=dict(startup_ms=obj.startup_ms,warmup_ms=(time.perf_counter()-tick)*1000,counters=counter_snapshot(obj),identity=obj.identity)
+        if setup_row:require(config.digest(json.loads(setup_row[0]))==setup_row[1],'Corrupt startup observation')
+        else:
+            setup=dict(cpu_observations=cpu.observations,verified=cpu.verify(),warmup=warmup)
+            with db:db.execute('INSERT INTO setup VALUES(0,?,?)',(config.canonical(setup),config.digest(setup)))
+        on_event(dict(event='value_pilot_benchmark_started',stage=stage,cases=count,total_cases=cases_total,games=game_count,total_games=games_total))
+        for index in range(count,cases_total if case_limit is None else case_limit):
+            row=plan['cases'][index];q={entry['pit']:entry['value_player0'] for entry in row['reference']['action_scores']};sign=1 if row['state']['controller']==0 else -1;measurements={};orders={}
+            for bi,ms in enumerate(plan['budgets_ms']):
+                names=prior.expected_order(index,bi,plan);orders[str(ms)]=names;measurements[str(ms)]={}
+                for name in names:
+                    cpu.verify();answer=decide(name,engines[name],row['state'],ms,plan);choice=answer['decision']['chosen']
+                    measurements[str(ms)][name]=dict(decision=answer,reference_optimal=choice in row['reference']['best_moves'] if choice is not None else None,reference_regret=sign*(row['reference']['target_player0']-q[choice]) if choice is not None else None)
+            body=dict(index=index,state_key=row['state_key'],cohort=row['cohort'],stratum=row['stratum'],reference=row['reference'],orders=orders,measurements=measurements,cpu_verified=cpu.verify());validate_case(body,index,plan);work.admit(1024*1024)
+            on_event(dict(event='value_pilot_case_precommit',stage=stage,completed=index,total=cases_total))
+            with db:db.execute('INSERT INTO cases VALUES(?,?,?)',(index,config.canonical(body),config.digest(body)))
+            on_event(dict(event='value_pilot_case_committed',stage=stage,completed=index+1,total=cases_total))
+        comparisons={row['id']:row for row in plan['arena_comparisons']};order=plan['arena_work_order']
+        if not no_arena:
+            for index in range(game_count,games_total if arena_limit is None else arena_limit):
+                unit=order[index];comp=comparisons[unit['comparison']];pair=unit['pair'];seat=unit['seat'];row=plan['arena_starts'][pair];p=row['state'];moves=[];decisions=[];fallbacks=Counter()
+                for _ in range(plan['arena_max_choices']):
+                    normal=baseline_engine.normalize(flatten(p),actor=p['controller'],total=98)
+                    if normal['terminal']:break
+                    p=normal['position'];name=comp['candidate'] if p['controller']==seat else comp['opponent'];cpu.verify();answer=decide(name,engines[name],p,plan['arena_ms'],plan);fallback=not answer['decision']['usable_decision'];action=normal['legal_actions'][0] if fallback else answer['decision']['chosen']
+                    if fallback:fallbacks[name]+=1
+                    decisions.append(dict(engine=name,actor=p['controller'],fallback=fallback,decision=answer));moves.append(action);p=baseline_engine.apply(flatten(p),actor=p['controller'],action=action,total=98,trace=False)['position']
+                terminal=not any(map(sum,p['pits']));margin=(p['stores'][0]-p['stores'][1])*(1 if seat==0 else -1)
+                game=dict(comparison=comp['id'],pair=pair,candidate_seat=seat,start=row['state'],family=row['family'],moves=moves,decisions=decisions,final=p,status='terminal' if terminal else 'unfinished',candidate_final_margin=margin if terminal else None,candidate_match_score=(1 if margin>0 else 0 if margin<0 else .5) if terminal else None,fallbacks=dict(fallbacks),cpu_verified=cpu.verify())
+                replay_game(game,comp,pair,seat,plan,baseline_engine);work.admit(1024*1024)
+                on_event(dict(event='value_pilot_game_precommit',stage=stage,completed=index,total=games_total,comparison=comp['id'],pair=pair,seat=seat))
+                with db:db.execute('INSERT INTO games VALUES(?,?,?,?,?,?)',(index,comp['id'],pair,seat,config.canonical(game),config.digest(game)))
+                on_event(dict(event='value_pilot_game_committed',stage=stage,completed=index+1,total=games_total,comparison=comp['id'],pair=pair,seat=seat))
+        count=db.execute('SELECT COUNT(*) FROM cases').fetchone()[0];games=db.execute('SELECT COUNT(*) FROM games').fetchone()[0]
+        if count!=cases_total or games!=games_total:on_event(dict(event='value_pilot_benchmark_partial',stage=stage,cases=count,games=games));return dict(status='partial',identity=identity)
+        result=summarize(db,identity,plan);common.publish(output,result);resource_path=output.with_name(output.stem+'-resources.json')
+        if resource_path.exists():validate_resources(load(resource_path),output,implementation,plan)
+        else:
+            resources=dict(schema='value-pilot-benchmark-resources-v1',implementation_sha256=implementation['sha256'],report_file_sha256=sha(output),stage=stage,fixture=fixture,elapsed_seconds_this_invocation=time.perf_counter()-invocation_started,prior_committed_cases=initial_cases,prior_committed_games=initial_games,host=host_peak(),torch_imported=False,energy_measured=False,scope='This CPU-only invocation including admission/startup/remaining units/publication; earlier invocations excluded; no energy claim')
+            validate_resources(resources,output,implementation,plan);common.publish(resource_path,resources)
+        with db:work.put('value_pilot_benchmark_complete',dict(cases=cases_total,games=games_total,report_sha256=config.digest(result),resource_file_sha256=sha(resource_path)))
+        on_event(dict(event='value_pilot_benchmark_complete',stage=stage,cases=count,games=games,primary_gates=result['both_baseline_primary_gates']));return result
+
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('operation',choices=('plan','freeze','admit','run','verify','acceptance'));p.add_argument('--stage',choices=STAGES,default='pretraining');p.add_argument('--run');p.add_argument('--output');p.add_argument('--fixture',action='store_true');p.add_argument('--case-limit',type=int);p.add_argument('--no-arena',action='store_true');p.add_argument('--arena-limit',type=int);args=p.parse_args()
+    try:
+        if args.operation=='plan':make_plan();emit(dict(event='value_pilot_benchmark_planned'));return 0
+        if args.operation=='freeze':value=freeze();emit(dict(event='value_pilot_benchmark_frozen',sha256=value['sha256']));return 0
+        if args.operation=='admit':admit(read_plan(args.stage,args.fixture));emit(dict(event='value_pilot_benchmark_admitted',stage=args.stage));return 0
+        if args.operation=='verify':
+            require(not args.fixture and args.run is None and args.output is None,'Verify accepts registered production only')
+            emit(pretraining_witness() if args.stage=='pretraining' else closed_witness(args.stage));return 0
+        if args.operation=='acceptance':
+            import unittest
+            suite=unittest.defaultTestLoader.discover(str(ROOT/'tests'),pattern='value_pilot_benchmark_acceptance.py')
+            def names(items):
+                for item in items:
+                    if isinstance(item,unittest.TestSuite):yield from names(item)
+                    else:yield item.id().split('.')[-1]
+            covered=sorted(names(suite));result=unittest.TextTestRunner(verbosity=2).run(suite)
+            files=('congklak/value_pilot_benchmark.py','tools/benchmark-value-pilot.py','tests/value_pilot_benchmark_acceptance.py','build/value-pilot-benchmark-plan.json','build/value-pilot-benchmark-projection.json','build/value-pilot-baseline.json')
+            body=dict(schema='value-pilot-benchmark-author-v1',passed=result.wasSuccessful(),tests_run=result.testsRun,errors=len(result.errors),failures=len(result.failures),skips=len(result.skipped),methods=covered,inputs={name:sha(ROOT/name) for name in files})
+            common.teacher.atomic_json(ROOT/'build/value-pilot-benchmark-author.json',body);return 0 if result.wasSuccessful() else 1
+        run(args.stage,args.run,args.output,args.case_limit,args.no_arena,args.arena_limit,fixture=args.fixture);return 0
+    except KeyboardInterrupt:emit(dict(event='value_pilot_benchmark_interrupted'));return 130
+    except Exception as exc:emit(dict(event='value_pilot_benchmark_refused',error=str(exc)));return 2
+

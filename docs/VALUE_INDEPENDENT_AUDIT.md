@@ -1,0 +1,36 @@
+# Fixed-policy value-head independent audit
+
+Status: all ten independent methods and the exhaustive audit passed. Completed full-audit revalidation preserved its bytes and modification time. Engineering acceptance and playing strength are separate; neither profile passed both baseline strength gates.
+
+The treatment keeps the accepted 127-input, width 64 encoder, native evaluator and c_puct=0.25 PUCT implementation fixed. The six shared-trunk and policy tensors contain 12,807 parameters and remain identical to the preceding refined model. Only the two value-head tensors, containing 65 parameters, can change. The loss is original-root H8 player-0 seed-margin Huber with delta 4, reconstructed as D plus signed-active times the tanh head. Action targets enter descriptive metrics only. There is no policy gradient, self-play target, oracle target, new teacher horizon or metric-selected checkpoint.
+
+Policy preservation has a structural proof: the same encoder and the same two hidden layers and policy head compute the same network logits for every position. The value head is outside that dataflow. Native and literal forward comparisons test the implemented boundary as well. PUCT visits and recommendations can change when the value estimates change; preserving network logits does not freeze search allocation.
+
+The new ownership registry inherits the accepted quality registry and adds every active>4 position in all 384 preceding quality arena games. A protected quotient hit excludes its entire selected original teacher family. The new optimizer admits 7,592 of the original 8,000 training rows and excludes 408, preserving the original corpus and exclusion reasons. The admitted roots remain a subset of the preceding 7,669-root refinement set. The filter restricts new draws; it does not remove ancestral training or development exposure.
+
+The 48 H8 diagnostic families and 24 arena families are selected by fixed namespaces, exclude all prior arena IDs and the immediately preceding quality diagnostic families, and are disjoint from one another. Older Stage5 diagnostic families can recur. The 32 previously known exact diagnostics remain separate. This is development evaluation, not unseen or sealed release validation. The prefreeze feasibility record documents the final exclusion rule before any new outcome was produced.
+
+Ten distinct independent methods cover prior 1,647-input preservation, full cohort/order reconstruction, ownership and seed-target derivation, frozen policy and literal/native outputs, frozen-checkpoint/optimizer corruption refusal, actual CUDA recovery, analyzer recovery, case recovery, arena recovery, and expired-deadline/physical-work admission. Unchanged accepted search checks are not counted again.
+
+The CUDA fixtures kill real workers before and after step 4 commits, preserve the previous committed prefix, and require resumed step 6 model/optimizer/sampler/Python/Torch/CUDA RNG to equal a fresh schedule numerically exactly. This comparison does not distinguish signed zero in floating tensors. Frozen-model preservation is checked separately using raw FP32 bytes. Analyzer fixtures kill a 128-backup attempt before and after commit while retaining the prior 64-backup export; they check fresh semantic/counter equality, export repair and completed byte/mtime stability. Cases and games retain committed prefixes. Raw killed states, validated backups and refusal logs remain preserved.
+
+The plan, target and CUDA-recovery groups were executed with the exact coordinator now retained as `tools/value-audit-executed-v1.py`. Their original report bytes are retained under `build/value-audit/executed-v1/`. The current report wrappers relocate that executed-source binding and add explicit original-report/source provenance; their results, methods, evidence and durations are unchanged. These four methods were not rerun. The later six methods use the corrected coordinator. Its final production worker compares all six frozen tensors by raw uint8 views at every checkpoint, fixing the earlier audit helper's imprecise float-equality claim. `tools/value-audit-bindings.py` verifies this relocation, and the collector records each group's coordinator version. No producer, trained outcome or acceptance count changed.
+
+The full audit independently inspected all 80 cases, 640 engine/budget measurements and 192 production games, literally replayed their 6,461 choices, and derived all four family-bootstrap intervals and the two matched refit-minus-control differences. Every production game terminated and there were zero fallback choices. The separately resumed arena fixture contains 6,463 choices because its final timed game was recomputed; this fixture is not substituted for the original strength campaign. It retained 191 committed games, killed the next unit, resumed to 192, preserved completed bytes/mtimes and refused a rehashed forged margin.
+
+The ownership audit literally replayed all 384 preceding quality games and 11,920 choices. It independently reconstructed the 9,137 active observations and resulting registry of 32,566 quotients and 2,370 families. All 1,647 prior accepted inputs retained their original hashes. Both model exports matched literal forwards on all 1,000 development roots each: 2,000 forwards, zero observed error and unchanged policy logits.
+
+A separate pinned Torch worker deserialized all 30 production checkpoints. At every checkpoint, all six frozen tensors matched the control's raw FP32 bytes. Only the two value-head tensors changed. The worker validated both optimizer moment sets and steps, independently replayed all 384,000 sampler draws, reconstructed Python/Torch/CUDA RNG states, and verified the final export mapping. Production moment checks cover ownership, shapes, dtype, finiteness and nonnegative squared moments; exact fresh-versus-resumed moment equality is tested by the killed fixtures rather than replaying all 1,500 production gradient updates.
+
+The equal-time primary results are paired mean final seed margins with unadjusted 95% family-bootstrap intervals, using 24 families and both seats at 25 ms per decision:
+
+| Profile | Baseline | Mean margin | 95% interval | Gate |
+| --- | --- | ---: | --- | --- |
+| policy_control | H_v1 | +1.042 | [-1.125, +3.250] | Fail |
+| policy_control | H8_relay_CPU | -1.583 | [-4.292, +0.667] | Fail |
+| value_refit | H_v1 | +0.375 | [-1.667, +2.417] | Fail |
+| value_refit | H8_relay_CPU | -2.375 | [-4.958, -0.292] | Fail |
+
+The descriptive matched refit-minus-control differences were -0.667 seeds against H_v1 and -0.792 against H8_relay_CPU. They have no confidence interval or promotion gate. Better development teacher-value error did not establish stronger play; the current evidence does not support promoting this value refit.
+
+No automatic default promotion, sealed-test claim, exact-game solution or electricity measurement is part of this experiment. H_v1 remains the default. Source-bound reports and retained raw evidence are under `build/value-audit/`; `audit.json` records the completed independent audit and `full-rerun.json` records its read-only completed revalidation. The separate aggregate recorder combines four owner learning methods, thirteen owner benchmark methods and these ten independent methods, for 27 new checks.

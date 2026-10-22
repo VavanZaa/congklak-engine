@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Congklak — Ownership resolution</title>
+<style>
+:root{color-scheme:dark;font:16px/1.5 system-ui,sans-serif;background:#10151e;color:#e2e8f0}body{max-width:1120px;margin:auto;padding:32px}h1{font-size:28px;margin-bottom:6px}p{color:#aebdd0}#status{background:#182334;padding:18px;border-radius:12px;margin:22px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}.card{background:#18202c;border:1px solid #2b394c;padding:20px;border-radius:12px}.card h2{font-size:18px;margin:10px 0}.badge{display:inline-block;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#b9d6ff;background:#243950;border-radius:20px;padding:3px 9px}.complete{color:#a4e4c4;background:#204137}.hold{color:#f6d18b;background:#493b21}code{font-size:12px;overflow-wrap:anywhere;color:#9cb4d2}#facts{display:flex;flex-wrap:wrap;gap:14px}.fact{background:#1b2635;padding:8px 13px;border-radius:8px}footer{margin-top:28px;color:#94a3b8;font-size:13px}strong{color:#e2e8f0}
+</style>
+<h1>Congklak ownership resolution</h1><p>Fixed models and policy · Audited future-data prerequisites · No training running</p>
+<div id="status">Loading immutable progress…</div><div id="facts"></div>
+<h2>Current work and preserved results</h2><div class="grid" id="cards"></div>
+<footer id="scope"></footer>
+<script>
+const el=(tag,text,cls)=>{const x=document.createElement(tag);x.textContent=text;if(cls)x.className=cls;return x};
+async function refresh(){try{const r=await fetch('/api/status',{cache:'no-store'});if(!r.ok)throw Error('Observer unavailable');const d=await r.json();
+const st=document.getElementById('status');st.replaceChildren(el('strong',d.current_work.message),el('p','Next: '+d.next_operation));
+const facts=document.getElementById('facts');facts.replaceChildren(...[
+['Evidence',d.accepted?'Accepted':'Verification pending'],['Metadata units',d.progress.committed_units+' / '+(d.progress.total_units??'planning')],
+['Models / policy','Fixed'],['Optimizer steps',d.activity.optimizer_steps],['New labels',d.activity.new_teacher_labels],['Historical unseen claim','None'],['Training authorized','No']
+].map(([k,v])=>el('div',k+': '+v,'fact')));
+const cards=document.getElementById('cards');cards.replaceChildren(...d.tools.map(c=>{const x=el('article','','card');x.append(el('span',c.state,'badge '+c.state),el('h2',c.title),el('p',c.result),el('p',c.improvement||''),el('code',c.evidence||''));return x}));
+document.getElementById('scope').textContent=d.scope;
+}catch(e){document.getElementById('status').replaceChildren(el('strong','HOLD: '+e.message));}}
+refresh();setInterval(refresh,5000);
+</script></html>

@@ -1,0 +1,13 @@
+# Current neural-diagnostic commands
+
+Use `python tools/diagnose-neural-v2.py collect` to resume this study or reopen its completed cache. Use `python tools/diagnose-neural-v2.py verify` to verify the certified report. `assess --output <new-path>` can reconstruct a missing report from certified persisted data. None of these completed operations changes model weights, policy, targets or observations.
+
+The original collector, numerical sources, source freeze, recovery evidence and production cache remain immutable. The versioned reader is `congklak/neurodiag_v2.py`; its source contract is `build/neurodiag-completion-implementation.json`. The original `tools/diagnose-neural.py collect` is retained as executed historical source. Its certified completed branch has a Windows lock defect and is superseded by the v2 command above.
+
+The independent final audit discovered that the original completed collector acquired `writer.lock` before validating production evidence. That evidence pins the lock file itself. On Windows the second handle used for hashing could raise `PermissionError`. Removing the lock from evidence would weaken verification, so its bytes, size and modification time remain protected.
+
+The new reader checks for either certificate artifact or a completed journal marker first. Such caches take a read-only path through the unchanged raw reader and independent certificate validation, before any `phase6_store.Work` construction. A missing or corrupt certificate, incomplete cache under a live certificate, changed source or damaged required export refuses instead of falling back to collection. The immutable manifest retains its historical `complete_uncertified` creation status; certification is external and the published result carries `certified=true`.
+
+With neither certificate artifact nor complete marker, collection delegates to the frozen original producer. Its FULL/WAL batch publication and real pre/post-commit process-kill recovery remain unchanged. A valid empty SQLite startup file without `meta` routes to that producer's startup validation. This is the existing single-writer lifecycle: independent certification follows collector closure. The new module does not introduce another observation generator or permit mutation of certified caches.
+
+The revised independent final audit targets this API and CLI, traps `Work` construction and numerical entrypoints on completed access, exercises missing/corrupt certificate and incomplete-cache refusals, and checks durable bytes/size/mtime. Failed earlier attempts and their exact executed sources are retained separately. Final acceptance records original preflight, corrected production audit and corrected completion audit as distinct executed source versions.

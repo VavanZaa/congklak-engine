@@ -1,0 +1,33 @@
+# Ordinary-position coverage and self-play data pilot
+
+This is a data and offline sampling experiment for Betawi `id-betawi-relay7-v0`. It follows the sealed self-play training pilot, whose playing-strength gains were inconclusive. Both `data/quality-train-v1/model.json` and `data/selfplay-training-pilot-v1/model.json` stay fixed; H_v1 remains the default. No optimizer, teacher searches, new strength matches, model expansion or automatic promotion are part of this step.
+
+## Reason for the experiment
+
+The last 276 replay observations contain only 23 ordinary observations from 14 distinct full states. Eight high-band observations are repeats of four selected starts; all occur at choice zero. The 15 lower-band observations cover ten states. None are forced moves. The declared sampler produced approximately its intended ordinary exposure, about 10%; changing weights cannot create missing support. This study adds distinct ordinary states rather than treating repeated draws as new data. Analysis of the saved 96-game arena is descriptive development evidence, not a new strength test or proof of a particular blunder.
+
+## Fixed collection and ownership
+
+- Generate exactly 512 legal standard-start history prefixes using seed 20261026 and a new family namespace. Even indices use random legal choices; odd indices use the frozen control policy with epsilon 0.25 after eight random opening choices. Stop at 192 choices or below 25 active seeds. No search or teacher targets are needed for prefix collection.
+- Assign training or validation ownership by a declared deterministic 80/20 family hash before generation. An eligible candidate has at least two legal choices and is strictly ordinary under classification of all legal continuations, with 25-49 or 50-74 active seeds. Classifying only the played action is insufficient.
+- Close the complete 512-family pool before root selection. Build transitive family-to-eligible-quotient components across both bands. Exclude components touching genuine protected evaluation ownership, the separate historical collection-novelty ledger, or mixed training/validation ownership. Shared states outside this eligible domain do not poison every history through their common opening.
+- Select at most 24 training starts: 12 high-band ordinary and 12 lower-band ordinary; plus six protected validation roots, three in each band. Use deterministic matching with one family per selected root and no duplicate selected quotient. Publish exact quotas, support and shortfalls; no filler or replacement after outcomes.
+- Keep true evaluation protection separate from collection novelty. Protect the previous true-role ledger, all 96 latest arena trajectories and their families, earlier validation and diagnostics, and all new validation-owned eligible candidate quotients and families before training-family rollouts. The six selected validation roots are a panel within this larger protected ownership ledger. Historical training metadata may reserve collection novelty without becoming a blanket evaluation ban. Prior exposure cannot be undone.
+
+## Fixed-control rollouts and admission
+
+Only selected training roots generate rollouts. Each receives two seeded trajectories, at most 48 games in total, using the unchanged control and improved CPU PUCT: c_puct 0.25, 64 completed simulations per decision, 2,048 tree nodes, at most 512 choices per trajectory, no GPU or Torch. Root Dirichlet noise uses alpha 0.3 and fraction 0.25; behavior samples raw visits for eight choices, then selects maximum visits. Policy targets retain raw visits divided by 64, regardless of behavior temperature. Values retain the exact terminal player-zero margin from each individual completed game. Bonus turns do not imply a sign flip.
+
+Full trajectories include capture, bonus and late positions through termination, but the new replay admits only strict ordinary positions with at least two legal actions and at least 25 active seeds. Both games must terminate, and an eligible protected bridge rejects the entire training family. Capped games supply no invented draws or returns. Validation roots never generate training games or enter replay. Retain all excluded raw histories and reasons.
+
+Cap each raw full state's replay observations at four, prioritizing selected choice-zero records before a deterministic hash tie-break. Preserve individual visit distributions and returns without averaging them into new targets. Report descendant coverage separately from selected-start support.
+
+For a usable-data pilot flag, require at least eight distinct admitted high-band starts and eight lower-band starts, each from its own selected family and with both terminal-game choice-zero records retained. Repeated records and descendant-only positions cannot satisfy this gate. A complete three-plus-three validation panel is a separate requirement for a future learning experiment. Missing coverage yields an honest shortfall, without extra families, relaxed protection or more search. Passing these gates does not authorize training or establish readiness for a large run.
+
+## Review, recovery and completion
+
+Offline sampling proposals compare family-balanced and ordinary-band/unique-state alternatives, with unit per-draw loss, rare-root/family concentration and expected exposure. Any hypothetical 25,600-draw comparison is labeled as a proposed distribution, not actual optimizer work. Probability concentration is not independent-game or gradient effective sample size. No proposal is applied in this step.
+
+An independent auditor reviews ownership, literal histories, selection closure, root policies, terminal-return orientation, all production rows and sampling arithmetic. Actual process kills before and after collection-family commits and self-play-decision commits verify four real recovery barriers. Committed prefixes must survive; uncommitted fixed-simulation searches may be recomputed. Completed reruns perform zero new collection commits, PUCT/teacher searches, games or optimizer work, preserve durable bytes and modification times, and import no Torch. Revalidating saved legal histories is permitted CPU work.
+
+All 3,171 inputs in `build/ordinary-selfplay-baseline.json` remain unchanged. New source, data, reports and observer artifacts use ordinary-selfplay names. Sources, scope and budgets freeze before production; root owns the single production launch after owner checks and independent preflight. The dashboard distinguishes initialized and terminal games, selected and admitted roots, distinct states, hypothetical weights, shortfalls and held training. Verification uses the local backend and listener; earlier denied browser access is not retried.

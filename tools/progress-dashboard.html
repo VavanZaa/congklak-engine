@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Congklak · Engine workshop</title>
+<style>
+:root{--ink:#182b35;--muted:#5d717b;--line:#d8e2e6;--paper:#f5f7f8;--teal:#077b74;--amber:#986000;--red:#b33741}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);font:14px/1.55 "Segoe UI",sans-serif;color:var(--ink)}
+header{background:#fff;border-bottom:1px solid var(--line)}.wrap{max-width:1440px;margin:auto;padding:24px 32px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:20px}.brand{font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--teal)}
+h1{font-size:30px;letter-spacing:-1px;line-height:1.2;margin:8px 0}p{margin:6px 0}.muted{color:var(--muted)}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:7px;padding:8px 13px}button:hover{border-color:var(--teal)}
+.buttons{display:flex;gap:8px;flex-wrap:wrap}.pill{display:inline-flex;align-items:center;gap:6px;border-radius:5px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:4px 7px;background:#e8edf0;color:#52656e}
+.complete{color:#07675f;background:#dff3ee}.held,.partial,.stale,.interrupted_or_exited,.interrupted{color:#835400;background:#fff0ce}.read_error,.failed,.quarantined{color:#a12f39;background:#fde8e9}.running{color:#185da8;background:#e3efff}
+.overview{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin:20px 0}.panel{border:1px solid var(--line);border-radius:10px;background:#fff;padding:18px 20px}.eyebrow{font-size:11px;letter-spacing:1.2px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.activity{border-left:4px solid var(--teal)}.decision{border-left:4px solid #c99329;background:#fffdf7}.activity strong{font-size:17px}.decision strong{font-size:16px}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:24px 0 14px;flex-wrap:wrap}
+.selected{color:#fff;background:var(--teal);border-color:var(--teal)}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.tool{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column}
+.toolhead{display:flex;gap:8px;justify-content:space-between;align-items:flex-start;padding:18px 18px 8px}.tool h2{font-size:16px;margin:0;line-height:1.4}.toolbody{padding:0 18px 16px;flex:1}.result{min-height:64px}.counter{margin:12px 0}.counterline{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--muted)}.track{height:5px;background:#edf1f3;border-radius:3px;margin-top:5px;overflow:hidden}.fill{height:100%;background:var(--teal)}
+.fix{border-top:1px solid #e5edef;padding:12px 18px;background:#fafcfc;font-size:12px}.fix b{display:block;color:var(--teal);font-size:10px;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}.evidence{font:11px/1.5 Consolas,monospace;color:var(--muted);overflow-wrap:anywhere;margin-top:12px}
+details{margin:22px 0;border:1px solid var(--line);border-radius:9px;background:#fff;padding:15px 18px}summary{cursor:pointer;font-weight:600}.run{border-top:1px solid var(--line);padding:12px 0}.runline{display:flex;align-items:center;gap:10px;margin:5px 0}.run code{font-size:11px;overflow-wrap:anywhere}.banner{display:none;padding:12px 16px;background:#fde8e9;color:#a12f39;border-radius:7px;margin:15px 0}.foot{font-size:12px;color:var(--muted);margin:24px 0}.commands{font-family:Consolas,monospace;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;color:#34515f}.empty{color:var(--muted);padding:24px}
+@media(max-width:1050px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.overview{grid-template-columns:1fr}}@media(max-width:650px){.wrap{padding:18px}.grid{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}h1{font-size:26px}}
+</style>
+</head>
+<body>
+<header><div class="wrap top"><div><div class="brand">Congklak / Engine workshop</div><h1>Build progress & next improvements</h1><p class="muted">Simulation → verified data → training → native search → strength checks</p></div><div><div class="buttons"><button id="refresh">Refresh now</button><button id="save">Save snapshot</button></div><p id="updated" class="muted" style="font-size:12px">Connecting to the local progress reader…</p></div></div></header>
+<main class="wrap">
+<div id="error" class="banner" role="alert"></div>
+<section class="overview"><div class="panel activity"><div class="eyebrow">Currently building / running</div><strong id="activity">Loading durable tool status…</strong><p id="active" class="muted"></p></div><div class="panel decision"><div class="eyebrow">Promotion gates · held</div><strong>H_v1 remains the default engine</strong><p class="muted">The learned candidate must clear ordinary-value and independent strength gates before it becomes the default.</p></div></section>
+<div class="toolbar"><div class="buttons" id="filters"><button data-filter="deeper" class="selected">Deeper + relay</button><button data-filter="action">Prior action trial</button><button data-filter="stage5">All Stage 5</button><button data-filter="all">All tools</button><button data-filter="attention">Needs attention</button><button data-filter="training">Training</button><button data-filter="evaluation">Search & evaluation</button></div><span id="counts" class="muted"></span></div>
+<section id="grid" class="grid" aria-live="polite"></section>
+<details open><summary>Latest tool invocations & recovery</summary><div id="runs" class="muted">Commands launched with the progress wrapper appear here.</div></details>
+<details><summary>How to follow or run a tool</summary><div class="commands">
+py -3.12 -m congklak.progress watch
+py -3.12 -m congklak.progress run campaign build
+py -3.12 -m congklak.progress run training-v2 train --run data/training-stronger2-w256-seed31415 --width 256 --seed 31415
+py -3.12 -m congklak.progress run benchmark
+
+After interruption, rerun exactly the same tool command. Committed catalogs decide where to resume. This dashboard only reads status and cannot start or delete jobs.
+</div></details>
+<p id="scope" class="foot"></p>
+</main>
+<script>
+let latest=null,filter='deeper',busy=false;
+const $=id=>document.getElementById(id);
+function node(tag,text,className){const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e}
+function badge(state){return node('span',state.replaceAll('_',' '),'pill '+state)}
+function visible(t){if(filter==='all')return true;if(filter==='deeper')return t.id.startsWith('stage5-deeper-')||t.id.startsWith('training-stage5-deeper-')||t.id==='promotion';if(filter==='action')return t.id.startsWith('stage5-action-')||t.id.startsWith('training-stage5-action-')||t.id==='promotion';if(filter==='stage5')return t.id.startsWith('stage5-')||t.id.startsWith('training-stage5-')||t.id==='promotion';if(filter==='attention')return t.needs_improvement;if(filter==='training')return t.id.startsWith('training')||['curation','campaign','capacity','stage5-features'].includes(t.id);return ['build','oracle','neural','analyze','benchmark','audit','promotion','stage5-speed','stage5-strength','stage5-audit','stage5-action-native','stage5-action-strength','stage5-action-audit','stage5-deeper-native','stage5-deeper-strength','stage5-deeper-audit'].includes(t.id)}
+function render(){if(!latest)return;$('updated').textContent='Observed '+new Date(latest.observed_at).toLocaleTimeString()+' · refresh every 2s';$('activity').textContent=latest.current_work.message;
+$('active').textContent=latest.active_tools.length?latest.active_tools.map(r=>r.tool+': '+r.last_event).join(' · '):'No tracked process is running. Completed artifacts and saved checkpoints are shown below.';
+$('counts').textContent=latest.tools.filter(t=>t.state==='complete').length+' completed stages / '+latest.tools.length+' tracked';$('scope').textContent=latest.scope;
+const grid=$('grid');grid.replaceChildren();for(const t of latest.tools.filter(visible)){const e=node('article',undefined,'tool'),head=node('div',undefined,'toolhead');head.append(node('h2',t.title),badge(t.state));e.append(head);const body=node('div',undefined,'toolbody');body.append(node('p',t.result,'result'));
+for(const c of t.counters){const box=node('div',undefined,'counter'),line=node('div',undefined,'counterline');line.append(node('span',c.label),node('span',c.completed.toLocaleString()+(c.total===null?' committed':' / '+c.total.toLocaleString())));box.append(line);if(c.total!==null&&c.total>0){const track=node('div',undefined,'track'),fill=node('div',undefined,'fill');fill.style.width=Math.min(100,Math.max(0,100*c.completed/c.total))+'%';track.append(fill);box.append(track)}body.append(box)}
+body.append(node('div',t.evidence,'evidence'));e.append(body);const fix=node('div',undefined,'fix');fix.append(node('b','Next fix / improvement'),node('span',t.improvement));e.append(fix);grid.append(e)}if(!grid.children.length)grid.append(node('p','No tools in this filter.','empty'));
+const runs=$('runs');runs.replaceChildren();if(!latest.recent_runs.length)runs.append(node('p','No wrapper invocations recorded yet. Existing work is recovered from the SQLite catalogs.'));
+for(const r of latest.recent_runs){const e=node('div',undefined,'run'),line=node('div',undefined,'runline');line.append(badge(r.state),node('strong',r.tool),node('span',new Date(r.updated_at).toLocaleString(),'muted'));e.append(line,node('p',r.last_event),node('code',r.command.join(' ')),node('div','Raw log: '+r.log,'evidence'));runs.append(e)}
+}
+async function refresh(){if(busy)return;busy=true;try{const r=await fetch('/api/status',{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);latest=await r.json();$('error').style.display='none';render()}catch(e){$('error').textContent='Progress reader is unavailable. The last view may be stale; restart: py -3.12 -m congklak.progress serve';$('error').style.display='block'}finally{busy=false}}
+$('refresh').onclick=refresh;$('filters').onclick=e=>{if(!e.target.dataset.filter)return;filter=e.target.dataset.filter;for(const b of $('filters').children)b.classList.toggle('selected',b.dataset.filter===filter);render()};$('save').onclick=()=>{if(!latest)return;const url=URL.createObjectURL(new Blob([JSON.stringify(latest,null,2)],{type:'application/json'})),a=node('a');a.href=url;a.download='congklak-flow-progress.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+refresh();setInterval(refresh,2000);
+</script>
+</body></html>

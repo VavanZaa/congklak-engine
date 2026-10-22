@@ -1,0 +1,3111 @@
+{
+  "schema_version": 1,
+  "profile_id": "id-betawi-relay7-v0",
+  "encoding": "Ring: A0 A1 A2 A3 A4 A5 A6 SA B0 B1 B2 B3 B4 B5 B6 SB. Local actions are 0 through 6.",
+  "provenance": "Synthetic, manually derived golden transitions from the frozen FIRST_IMPLEMENTATION.md rules. Player-swapped cases apply the coordinate rotation by eight slots; they do not reverse sowing direction. Full traces record every deposit and deterministic pickup. Inputs need not be reachable from the opening.",
+  "comparison": "Compare expected fields recursively as a subset; extra report metadata is permitted. Error fixtures compare the error code. Successful apply fixtures require the complete listed events.",
+  "fixtures": [
+    {
+      "id": "standard-opening",
+      "operation": "validate",
+      "position": {
+        "pits": [
+          [
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7
+          ],
+          [
+            7,
+            7,
+            7,
+            7,
+            7,
+            7,
+            7
+          ]
+        ],
+        "stores": [
+          0,
+          0
+        ],
+        "controller": 0
+      },
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7
+            ],
+            [
+              7,
+              7,
+              7,
+              7,
+              7,
+              7,
+              7
+            ]
+          ],
+          "stores": [
+            0,
+            0
+          ],
+          "controller": 0
+        },
+        "input_controller": 0,
+        "normalized_controller": 0,
+        "terminal": false,
+        "legal_actions": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "passes": [],
+        "margin_player0": 0
+      },
+      "tags": [
+        "initialization",
+        "seed-conservation"
+      ]
+    },
+    {
+      "id": "own-store-bonus",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          47,
+          48
+        ],
+        "controller": 0
+      },
+      "action": 6,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            48,
+            48
+          ],
+          "controller": 0
+        },
+        "actor": 0,
+        "pit": 6,
+        "reason": "own_store",
+        "last_slot": 7,
+        "drops": 1,
+        "relays": 0,
+        "store_delta": [
+          1,
+          0
+        ],
+        "terminal": false,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 0,
+            "slot": 6,
+            "count": 1,
+            "before": 1,
+            "after": 0,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 7,
+            "count": 1,
+            "before": 47,
+            "after": 48,
+            "hand": 0
+          },
+          {
+            "type": "bonus",
+            "actor": 0,
+            "slot": 7,
+            "count": 0
+          }
+        ]
+      },
+      "tags": [
+        "bonus"
+      ]
+    },
+    {
+      "id": "own-capture-and-forced-pass",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ],
+          [
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          46,
+          46
+        ],
+        "controller": 0
+      },
+      "action": 5,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            51,
+            46
+          ],
+          "controller": 0
+        },
+        "actor": 0,
+        "pit": 5,
+        "reason": "own_capture",
+        "last_slot": 6,
+        "drops": 1,
+        "relays": 0,
+        "store_delta": [
+          5,
+          0
+        ],
+        "terminal": false,
+        "passes": [
+          {
+            "from": 1,
+            "to": 0
+          }
+        ],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 0,
+            "slot": 5,
+            "count": 1,
+            "before": 1,
+            "after": 0,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 6,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 0
+          },
+          {
+            "type": "capture",
+            "actor": 0,
+            "slot": 6,
+            "opposite": 8,
+            "count": 5,
+            "before": 46,
+            "after": 51,
+            "hand": 0
+          },
+          {
+            "type": "turn_end",
+            "actor": 0,
+            "slot": 6,
+            "count": 0
+          },
+          {
+            "type": "pass",
+            "actor": 1,
+            "count": 0,
+            "to": 0
+          }
+        ]
+      },
+      "tags": [
+        "capture",
+        "landing-seed",
+        "unrestricted-capture",
+        "forced-pass"
+      ]
+    },
+    {
+      "id": "own-empty-with-empty-opposite",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          47,
+          48
+        ],
+        "controller": 0
+      },
+      "action": 5,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            47,
+            48
+          ],
+          "controller": 1
+        },
+        "actor": 0,
+        "pit": 5,
+        "reason": "own_empty",
+        "last_slot": 6,
+        "drops": 1,
+        "relays": 0,
+        "store_delta": [
+          0,
+          0
+        ],
+        "terminal": false,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 0,
+            "slot": 5,
+            "count": 1,
+            "before": 1,
+            "after": 0,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 6,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 0
+          },
+          {
+            "type": "turn_end",
+            "actor": 0,
+            "slot": 6,
+            "count": 0
+          }
+        ]
+      },
+      "tags": [
+        "empty-opposite",
+        "landing-seed-retained"
+      ]
+    },
+    {
+      "id": "relay-from-both-rows",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            1,
+            0,
+            0,
+            0,
+            1,
+            2,
+            0
+          ],
+          [
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          46,
+          46
+        ],
+        "controller": 0
+      },
+      "action": 4,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ],
+            [
+              0,
+              2,
+              1,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            47,
+            46
+          ],
+          "controller": 1
+        },
+        "actor": 0,
+        "pit": 4,
+        "reason": "opponent_empty",
+        "last_slot": 10,
+        "drops": 6,
+        "relays": 2,
+        "store_delta": [
+          1,
+          0
+        ],
+        "terminal": false,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 0,
+            "slot": 4,
+            "count": 1,
+            "before": 1,
+            "after": 0,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 5,
+            "count": 1,
+            "before": 2,
+            "after": 3,
+            "hand": 0
+          },
+          {
+            "type": "relay",
+            "actor": 0,
+            "slot": 5,
+            "count": 3,
+            "before": 3,
+            "after": 0,
+            "hand": 3
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 6,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 7,
+            "count": 1,
+            "before": 46,
+            "after": 47,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 8,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 0
+          },
+          {
+            "type": "relay",
+            "actor": 0,
+            "slot": 8,
+            "count": 2,
+            "before": 2,
+            "after": 0,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 9,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 10,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 0
+          },
+          {
+            "type": "turn_end",
+            "actor": 0,
+            "slot": 10,
+            "count": 0
+          }
+        ]
+      },
+      "tags": [
+        "relay-own-row",
+        "relay-opponent-row"
+      ]
+    },
+    {
+      "id": "skip-opponent-store-A",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            9
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          44,
+          45
+        ],
+        "controller": 0
+      },
+      "action": 6,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              0
+            ]
+          ],
+          "stores": [
+            47,
+            45
+          ],
+          "controller": 1
+        },
+        "actor": 0,
+        "pit": 6,
+        "reason": "own_capture",
+        "last_slot": 0,
+        "drops": 9,
+        "relays": 0,
+        "store_delta": [
+          3,
+          0
+        ],
+        "terminal": false,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 0,
+            "slot": 6,
+            "count": 9,
+            "before": 9,
+            "after": 0,
+            "hand": 9
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 7,
+            "count": 1,
+            "before": 44,
+            "after": 45,
+            "hand": 8
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 8,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 7
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 9,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 6
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 10,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 5
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 11,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 4
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 12,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 3
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 13,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 14,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 0,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 0
+          },
+          {
+            "type": "capture",
+            "actor": 0,
+            "slot": 0,
+            "opposite": 14,
+            "count": 2,
+            "before": 45,
+            "after": 47,
+            "hand": 0
+          },
+          {
+            "type": "turn_end",
+            "actor": 0,
+            "slot": 0,
+            "count": 0
+          }
+        ]
+      },
+      "tags": [
+        "opponent-store-skipped",
+        "capture-after-lap"
+      ]
+    },
+    {
+      "id": "source-revisit-and-final-pit-relay",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            16,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          41,
+          41
+        ],
+        "controller": 0
+      },
+      "action": 0,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              1,
+              0,
+              2,
+              0,
+              2,
+              0,
+              2
+            ],
+            [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ]
+          ],
+          "stores": [
+            43,
+            41
+          ],
+          "controller": 0
+        },
+        "actor": 0,
+        "pit": 0,
+        "reason": "own_store",
+        "last_slot": 7,
+        "drops": 22,
+        "relays": 3,
+        "store_delta": [
+          2,
+          0
+        ],
+        "terminal": false,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 0,
+            "slot": 0,
+            "count": 16,
+            "before": 16,
+            "after": 0,
+            "hand": 16
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 1,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 15
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 2,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 14
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 3,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 13
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 4,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 12
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 5,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 11
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 6,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 10
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 7,
+            "count": 1,
+            "before": 41,
+            "after": 42,
+            "hand": 9
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 8,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 8
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 9,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 7
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 10,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 6
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 11,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 5
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 12,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 4
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 13,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 3
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 14,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 0,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 1,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 0
+          },
+          {
+            "type": "relay",
+            "actor": 0,
+            "slot": 1,
+            "count": 2,
+            "before": 2,
+            "after": 0,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 2,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 3,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 0
+          },
+          {
+            "type": "relay",
+            "actor": 0,
+            "slot": 3,
+            "count": 2,
+            "before": 2,
+            "after": 0,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 4,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 5,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 0
+          },
+          {
+            "type": "relay",
+            "actor": 0,
+            "slot": 5,
+            "count": 2,
+            "before": 2,
+            "after": 0,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 6,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 7,
+            "count": 1,
+            "before": 42,
+            "after": 43,
+            "hand": 0
+          },
+          {
+            "type": "bonus",
+            "actor": 0,
+            "slot": 7,
+            "count": 0
+          }
+        ]
+      },
+      "tags": [
+        "source-revisit",
+        "relay",
+        "bonus",
+        "opponent-store-skipped"
+      ],
+      "trace_checkpoints": [
+        {
+          "after_deposit": 16,
+          "ring_counts": [
+            1,
+            2,
+            1,
+            1,
+            1,
+            1,
+            1,
+            42,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            41
+          ],
+          "hand": 0
+        }
+      ]
+    },
+    {
+      "id": "forced-pass-input",
+      "operation": "normalize",
+      "position": {
+        "pits": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2
+          ]
+        ],
+        "stores": [
+          47,
+          49
+        ],
+        "controller": 0
+      },
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              2
+            ]
+          ],
+          "stores": [
+            47,
+            49
+          ],
+          "controller": 1
+        },
+        "input_controller": 0,
+        "normalized_controller": 1,
+        "terminal": false,
+        "legal_actions": [
+          6
+        ],
+        "passes": [
+          {
+            "from": 0,
+            "to": 1
+          }
+        ],
+        "margin_player0": -2
+      },
+      "tags": [
+        "forced-pass",
+        "input-controller-preserved"
+      ]
+    },
+    {
+      "id": "raw-empty-controller-choice-rejected",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2
+          ]
+        ],
+        "stores": [
+          47,
+          49
+        ],
+        "controller": 0
+      },
+      "action": 6,
+      "expected": {
+        "ok": false,
+        "error": {
+          "code": "forced_pass_required"
+        }
+      },
+      "tags": [
+        "forced-pass",
+        "invalid-action"
+      ]
+    },
+    {
+      "id": "forced-pass-then-row-revival",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2
+          ]
+        ],
+        "stores": [
+          47,
+          49
+        ],
+        "controller": 1
+      },
+      "action": 6,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            47,
+            50
+          ],
+          "controller": 0
+        },
+        "actor": 1,
+        "pit": 6,
+        "reason": "opponent_empty",
+        "last_slot": 0,
+        "drops": 2,
+        "relays": 0,
+        "store_delta": [
+          0,
+          1
+        ],
+        "terminal": false,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 1,
+            "slot": 14,
+            "count": 2,
+            "before": 2,
+            "after": 0,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 15,
+            "count": 1,
+            "before": 49,
+            "after": 50,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 0,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 0
+          },
+          {
+            "type": "turn_end",
+            "actor": 1,
+            "slot": 0,
+            "count": 0
+          }
+        ]
+      },
+      "tags": [
+        "revival",
+        "no-one-row-sweep",
+        "opponent-empty"
+      ]
+    },
+    {
+      "id": "opponent-empty-ending-retains-seed",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          48,
+          47
+        ],
+        "controller": 0
+      },
+      "action": 6,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            49,
+            47
+          ],
+          "controller": 1
+        },
+        "actor": 0,
+        "pit": 6,
+        "reason": "opponent_empty",
+        "last_slot": 8,
+        "drops": 2,
+        "relays": 0,
+        "store_delta": [
+          1,
+          0
+        ],
+        "terminal": false,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 0,
+            "slot": 6,
+            "count": 2,
+            "before": 2,
+            "after": 0,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 7,
+            "count": 1,
+            "before": 48,
+            "after": 49,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 8,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 0
+          },
+          {
+            "type": "turn_end",
+            "actor": 0,
+            "slot": 8,
+            "count": 0
+          }
+        ]
+      },
+      "tags": [
+        "opponent-empty",
+        "landing-seed-retained"
+      ]
+    },
+    {
+      "id": "no-premature-terminal-during-pickup",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          48,
+          49
+        ],
+        "controller": 0
+      },
+      "action": 6,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            49,
+            49
+          ],
+          "controller": 0
+        },
+        "actor": 0,
+        "pit": 6,
+        "reason": "own_store",
+        "last_slot": 7,
+        "drops": 1,
+        "relays": 0,
+        "store_delta": [
+          1,
+          0
+        ],
+        "terminal": true,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 0,
+            "slot": 6,
+            "count": 1,
+            "before": 1,
+            "after": 0,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 7,
+            "count": 1,
+            "before": 48,
+            "after": 49,
+            "hand": 0
+          },
+          {
+            "type": "terminal",
+            "actor": 0,
+            "count": 0,
+            "before": 49,
+            "after": 49
+          }
+        ]
+      },
+      "tags": [
+        "terminal",
+        "tie",
+        "no-premature-ending",
+        "no-terminal-bonus"
+      ]
+    },
+    {
+      "id": "capture-is-terminal-once-both-rows-empty",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ],
+          [
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          46,
+          47
+        ],
+        "controller": 0
+      },
+      "action": 5,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            51,
+            47
+          ],
+          "controller": 0
+        },
+        "actor": 0,
+        "pit": 5,
+        "reason": "own_capture",
+        "last_slot": 6,
+        "drops": 1,
+        "relays": 0,
+        "store_delta": [
+          5,
+          0
+        ],
+        "terminal": true,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 0,
+            "slot": 5,
+            "count": 1,
+            "before": 1,
+            "after": 0,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 0,
+            "slot": 6,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 0
+          },
+          {
+            "type": "capture",
+            "actor": 0,
+            "slot": 6,
+            "opposite": 8,
+            "count": 5,
+            "before": 46,
+            "after": 51,
+            "hand": 0
+          },
+          {
+            "type": "terminal",
+            "actor": 0,
+            "count": 0,
+            "before": 51,
+            "after": 47
+          }
+        ]
+      },
+      "tags": [
+        "capture",
+        "terminal",
+        "no-terminal-pass"
+      ]
+    },
+    {
+      "id": "terminal-tie-controller-0",
+      "operation": "normalize",
+      "position": {
+        "pits": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          49,
+          49
+        ],
+        "controller": 0
+      },
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            49,
+            49
+          ],
+          "controller": 0
+        },
+        "input_controller": 0,
+        "normalized_controller": 0,
+        "terminal": true,
+        "legal_actions": [],
+        "passes": [],
+        "margin_player0": 0
+      },
+      "score_perspectives": [
+        {
+          "score_player": 0,
+          "margin": 0
+        },
+        {
+          "score_player": 1,
+          "margin": 0
+        }
+      ],
+      "tags": [
+        "terminal",
+        "tie",
+        "both-perspectives"
+      ]
+    },
+    {
+      "id": "terminal-tie-controller-1",
+      "operation": "normalize",
+      "position": {
+        "pits": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          49,
+          49
+        ],
+        "controller": 1
+      },
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            49,
+            49
+          ],
+          "controller": 1
+        },
+        "input_controller": 1,
+        "normalized_controller": 1,
+        "terminal": true,
+        "legal_actions": [],
+        "passes": [],
+        "margin_player0": 0
+      },
+      "score_perspectives": [
+        {
+          "score_player": 0,
+          "margin": 0
+        },
+        {
+          "score_player": 1,
+          "margin": 0
+        }
+      ],
+      "tags": [
+        "terminal",
+        "tie",
+        "both-perspectives"
+      ]
+    },
+    {
+      "id": "own-store-bonus-player-swap",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ]
+        ],
+        "stores": [
+          48,
+          47
+        ],
+        "controller": 1
+      },
+      "action": 6,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            48,
+            48
+          ],
+          "controller": 1
+        },
+        "actor": 1,
+        "pit": 6,
+        "reason": "own_store",
+        "last_slot": 15,
+        "drops": 1,
+        "relays": 0,
+        "store_delta": [
+          0,
+          1
+        ],
+        "terminal": false,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 1,
+            "slot": 14,
+            "count": 1,
+            "before": 1,
+            "after": 0,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 15,
+            "count": 1,
+            "before": 47,
+            "after": 48,
+            "hand": 0
+          },
+          {
+            "type": "bonus",
+            "actor": 1,
+            "slot": 15,
+            "count": 0
+          }
+        ]
+      },
+      "tags": [
+        "bonus",
+        "player-swap"
+      ]
+    },
+    {
+      "id": "own-capture-and-forced-pass-player-swap",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ]
+        ],
+        "stores": [
+          46,
+          46
+        ],
+        "controller": 1
+      },
+      "action": 5,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            46,
+            51
+          ],
+          "controller": 1
+        },
+        "actor": 1,
+        "pit": 5,
+        "reason": "own_capture",
+        "last_slot": 14,
+        "drops": 1,
+        "relays": 0,
+        "store_delta": [
+          0,
+          5
+        ],
+        "terminal": false,
+        "passes": [
+          {
+            "from": 0,
+            "to": 1
+          }
+        ],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 1,
+            "slot": 13,
+            "count": 1,
+            "before": 1,
+            "after": 0,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 14,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 0
+          },
+          {
+            "type": "capture",
+            "actor": 1,
+            "slot": 14,
+            "opposite": 0,
+            "count": 5,
+            "before": 46,
+            "after": 51,
+            "hand": 0
+          },
+          {
+            "type": "turn_end",
+            "actor": 1,
+            "slot": 14,
+            "count": 0
+          },
+          {
+            "type": "pass",
+            "actor": 0,
+            "count": 0,
+            "to": 1
+          }
+        ]
+      },
+      "tags": [
+        "capture",
+        "landing-seed",
+        "unrestricted-capture",
+        "forced-pass",
+        "player-swap"
+      ]
+    },
+    {
+      "id": "own-empty-with-empty-opposite-player-swap",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ]
+        ],
+        "stores": [
+          48,
+          47
+        ],
+        "controller": 1
+      },
+      "action": 5,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              0,
+              0,
+              0,
+              1,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "stores": [
+            48,
+            47
+          ],
+          "controller": 0
+        },
+        "actor": 1,
+        "pit": 5,
+        "reason": "own_empty",
+        "last_slot": 14,
+        "drops": 1,
+        "relays": 0,
+        "store_delta": [
+          0,
+          0
+        ],
+        "terminal": false,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 1,
+            "slot": 13,
+            "count": 1,
+            "before": 1,
+            "after": 0,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 14,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 0
+          },
+          {
+            "type": "turn_end",
+            "actor": 1,
+            "slot": 14,
+            "count": 0
+          }
+        ]
+      },
+      "tags": [
+        "empty-opposite",
+        "landing-seed-retained",
+        "player-swap"
+      ]
+    },
+    {
+      "id": "relay-from-both-rows-player-swap",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            1,
+            2,
+            0
+          ]
+        ],
+        "stores": [
+          46,
+          46
+        ],
+        "controller": 1
+      },
+      "action": 4,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              0,
+              2,
+              1,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1
+            ]
+          ],
+          "stores": [
+            46,
+            47
+          ],
+          "controller": 0
+        },
+        "actor": 1,
+        "pit": 4,
+        "reason": "opponent_empty",
+        "last_slot": 2,
+        "drops": 6,
+        "relays": 2,
+        "store_delta": [
+          0,
+          1
+        ],
+        "terminal": false,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 1,
+            "slot": 12,
+            "count": 1,
+            "before": 1,
+            "after": 0,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 13,
+            "count": 1,
+            "before": 2,
+            "after": 3,
+            "hand": 0
+          },
+          {
+            "type": "relay",
+            "actor": 1,
+            "slot": 13,
+            "count": 3,
+            "before": 3,
+            "after": 0,
+            "hand": 3
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 14,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 15,
+            "count": 1,
+            "before": 46,
+            "after": 47,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 0,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 0
+          },
+          {
+            "type": "relay",
+            "actor": 1,
+            "slot": 0,
+            "count": 2,
+            "before": 2,
+            "after": 0,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 1,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 2,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 0
+          },
+          {
+            "type": "turn_end",
+            "actor": 1,
+            "slot": 2,
+            "count": 0
+          }
+        ]
+      },
+      "tags": [
+        "relay-own-row",
+        "relay-opponent-row",
+        "player-swap"
+      ]
+    },
+    {
+      "id": "skip-opponent-store-A-player-swap",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            9
+          ]
+        ],
+        "stores": [
+          45,
+          44
+        ],
+        "controller": 1
+      },
+      "action": 6,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            45,
+            47
+          ],
+          "controller": 0
+        },
+        "actor": 1,
+        "pit": 6,
+        "reason": "own_capture",
+        "last_slot": 8,
+        "drops": 9,
+        "relays": 0,
+        "store_delta": [
+          0,
+          3
+        ],
+        "terminal": false,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 1,
+            "slot": 14,
+            "count": 9,
+            "before": 9,
+            "after": 0,
+            "hand": 9
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 15,
+            "count": 1,
+            "before": 44,
+            "after": 45,
+            "hand": 8
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 0,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 7
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 1,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 6
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 2,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 5
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 3,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 4
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 4,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 3
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 5,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 6,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 8,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 0
+          },
+          {
+            "type": "capture",
+            "actor": 1,
+            "slot": 8,
+            "opposite": 6,
+            "count": 2,
+            "before": 45,
+            "after": 47,
+            "hand": 0
+          },
+          {
+            "type": "turn_end",
+            "actor": 1,
+            "slot": 8,
+            "count": 0
+          }
+        ]
+      },
+      "tags": [
+        "opponent-store-skipped",
+        "capture-after-lap",
+        "player-swap"
+      ]
+    },
+    {
+      "id": "source-revisit-and-final-pit-relay-player-swap",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            16,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          41,
+          41
+        ],
+        "controller": 1
+      },
+      "action": 0,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            [
+              1,
+              0,
+              2,
+              0,
+              2,
+              0,
+              2
+            ]
+          ],
+          "stores": [
+            41,
+            43
+          ],
+          "controller": 1
+        },
+        "actor": 1,
+        "pit": 0,
+        "reason": "own_store",
+        "last_slot": 15,
+        "drops": 22,
+        "relays": 3,
+        "store_delta": [
+          0,
+          2
+        ],
+        "terminal": false,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 1,
+            "slot": 8,
+            "count": 16,
+            "before": 16,
+            "after": 0,
+            "hand": 16
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 9,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 15
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 10,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 14
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 11,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 13
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 12,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 12
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 13,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 11
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 14,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 10
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 15,
+            "count": 1,
+            "before": 41,
+            "after": 42,
+            "hand": 9
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 0,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 8
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 1,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 7
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 2,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 6
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 3,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 5
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 4,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 4
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 5,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 3
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 6,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 8,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 9,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 0
+          },
+          {
+            "type": "relay",
+            "actor": 1,
+            "slot": 9,
+            "count": 2,
+            "before": 2,
+            "after": 0,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 10,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 11,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 0
+          },
+          {
+            "type": "relay",
+            "actor": 1,
+            "slot": 11,
+            "count": 2,
+            "before": 2,
+            "after": 0,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 12,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 13,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 0
+          },
+          {
+            "type": "relay",
+            "actor": 1,
+            "slot": 13,
+            "count": 2,
+            "before": 2,
+            "after": 0,
+            "hand": 2
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 14,
+            "count": 1,
+            "before": 1,
+            "after": 2,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 15,
+            "count": 1,
+            "before": 42,
+            "after": 43,
+            "hand": 0
+          },
+          {
+            "type": "bonus",
+            "actor": 1,
+            "slot": 15,
+            "count": 0
+          }
+        ]
+      },
+      "tags": [
+        "source-revisit",
+        "relay",
+        "bonus",
+        "opponent-store-skipped",
+        "player-swap"
+      ]
+    },
+    {
+      "id": "capture-is-terminal-once-both-rows-empty-player-swap",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+          ]
+        ],
+        "stores": [
+          47,
+          46
+        ],
+        "controller": 1
+      },
+      "action": 5,
+      "expected": {
+        "ok": true,
+        "position": {
+          "pits": [
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          ],
+          "stores": [
+            47,
+            51
+          ],
+          "controller": 1
+        },
+        "actor": 1,
+        "pit": 5,
+        "reason": "own_capture",
+        "last_slot": 14,
+        "drops": 1,
+        "relays": 0,
+        "store_delta": [
+          0,
+          5
+        ],
+        "terminal": true,
+        "passes": [],
+        "events": [
+          {
+            "type": "pickup",
+            "actor": 1,
+            "slot": 13,
+            "count": 1,
+            "before": 1,
+            "after": 0,
+            "hand": 1
+          },
+          {
+            "type": "deposit",
+            "actor": 1,
+            "slot": 14,
+            "count": 1,
+            "before": 0,
+            "after": 1,
+            "hand": 0
+          },
+          {
+            "type": "capture",
+            "actor": 1,
+            "slot": 14,
+            "opposite": 0,
+            "count": 5,
+            "before": 46,
+            "after": 51,
+            "hand": 0
+          },
+          {
+            "type": "terminal",
+            "actor": 1,
+            "count": 0,
+            "before": 47,
+            "after": 51
+          }
+        ]
+      },
+      "tags": [
+        "capture",
+        "terminal",
+        "no-terminal-pass",
+        "player-swap"
+      ]
+    },
+    {
+      "id": "empty-pit-rejected",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          47,
+          48
+        ],
+        "controller": 0
+      },
+      "action": 1,
+      "expected": {
+        "ok": false,
+        "error": {
+          "code": "empty_pit"
+        }
+      },
+      "tags": [
+        "invalid-action"
+      ]
+    },
+    {
+      "id": "enemy-ring-slot-is-not-local-action",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+          ],
+          [
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          47,
+          48
+        ],
+        "controller": 0
+      },
+      "action": 8,
+      "expected": {
+        "ok": false,
+        "error": {
+          "code": "invalid_action"
+        }
+      },
+      "tags": [
+        "invalid-action"
+      ]
+    },
+    {
+      "id": "terminal-choice-rejected",
+      "operation": "apply",
+      "position": {
+        "pits": [
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        ],
+        "stores": [
+          49,
+          49
+        ],
+        "controller": 1
+      },
+      "action": 0,
+      "expected": {
+        "ok": false,
+        "error": {
+          "code": "terminal_position"
+        }
+      },
+      "tags": [
+        "terminal",
+        "invalid-action"
+      ]
+    }
+  ]
+}
